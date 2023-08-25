@@ -280,7 +280,27 @@ public class OpenAiService {
             builder.addFormDataPart("language", request.getLanguage());
         }
 
-        return execute(api.createTranscription(builder.build()));
+        try (ResponseBody responseBody = execute(api.createTranscription(builder.build()))) {
+            final String responseFormat = request.getResponseFormat() == null ? "json" : request.getResponseFormat();
+            ObjectMapper objectMapper = defaultObjectMapper();
+            TranscriptionResult result;
+
+            switch (responseFormat) {
+                case "json":
+                case "verbose_json":
+                    return objectMapper.readValue(responseBody.string(), TranscriptionResult.class);
+                case "text":
+                case "vtt":
+                case "srt":
+                    result = new TranscriptionResult();
+                    result.setText(responseBody.string());
+                    return result;
+                default:
+                    throw new IllegalArgumentException("Unknown response format: " + responseFormat);
+            }
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        }
     }
 
     public TranslationResult createTranslation(CreateTranslationRequest request, String audioPath) {
