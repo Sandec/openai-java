@@ -326,7 +326,27 @@ public class OpenAiService {
             builder.addFormDataPart("temperature", request.getTemperature().toString());
         }
 
-        return execute(api.createTranslation(builder.build()));
+        try (ResponseBody responseBody = execute(api.createTranslation(builder.build()))) {
+            final String responseFormat = request.getResponseFormat() == null ? "json" : request.getResponseFormat();
+            ObjectMapper objectMapper = defaultObjectMapper();
+            TranslationResult result;
+
+            switch (responseFormat) {
+                case "json":
+                case "verbose_json":
+                    return objectMapper.readValue(responseBody.string(), TranslationResult.class);
+                case "text":
+                case "vtt":
+                case "srt":
+                    result = new TranslationResult();
+                    result.setText(responseBody.string());
+                    return result;
+                default:
+                    throw new IllegalArgumentException("Unknown response format: " + responseFormat);
+            }
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        }
     }
 
     public ModerationResult createModeration(ModerationRequest request) {
