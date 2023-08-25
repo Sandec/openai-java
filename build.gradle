@@ -9,3 +9,37 @@ allprojects {
         }
     }
 }
+
+configure([project(':api'), project(':client'), project(':service')]) {
+    apply plugin: 'maven-publish'
+
+    afterEvaluate {
+        publishing {
+            publications {
+                maven(MavenPublication) {
+                    from components.java
+
+                    groupId = "$GROUP"
+                    artifactId = project.name
+                    version = "$VERSION_NAME"
+                }
+            }
+
+            java {
+                withSourcesJar()
+                withJavadocJar()
+            }
+
+            repositories {
+                maven {
+                    name = "artifactory"
+                    url = "https://sandec.jfrog.io/artifactory/repo"
+                    credentials {
+                        username System.getenv("SANDEC_ARTIFACTORY_USERNAME")
+                        password System.getenv("SANDEC_ARTIFACTORY_PASSWORD")
+                    }
+                }
+            }
+        }
+    }
+}
